@@ -1,7 +1,7 @@
 package ar.edu.utn.frbb.tup.service;
 
-import ar.edu.utn.frbb.tup.model.*;
 import ar.edu.utn.frbb.tup.model.exception.ClienteAlreadyExistsException;
+import ar.edu.utn.frbb.tup.model.exception.CuentaAlreadyExistsException;
 import ar.edu.utn.frbb.tup.model.exception.TipoCuentaAlreadyExistsException;
 import ar.edu.utn.frbb.tup.persistence.ClienteDao;
 import org.junit.jupiter.api.BeforeAll;
@@ -12,12 +12,15 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
-
+import ar.edu.utn.frbb.tup.model.Cliente;
+import ar.edu.utn.frbb.tup.model.Cuenta;
+import ar.edu.utn.frbb.tup.model.TipoCuenta;
+import ar.edu.utn.frbb.tup.model.TipoMoneda;
+import ar.edu.utn.frbb.tup.model.TipoPersona;
 import java.time.LocalDate;
-
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+
 
 
 @ExtendWith(MockitoExtension.class)
@@ -125,7 +128,116 @@ public class ClienteServiceTest {
 
     }
 
-    //Agregar una CA$ y CC$ --> success 2 cuentas, titular peperino
-    //Agregar una CA$ y CAU$S --> success 2 cuentas, titular peperino...
-    //Testear clienteService.buscarPorDni
+    //Agregar una CA$ y CC$ → se puede agregar y se debe verificar que el cliente tenga 2 cuentas, titular sea el cliente que se creó
+    @Test
+    public void testAgregarCAyCC() throws CuentaAlreadyExistsException, TipoCuentaAlreadyExistsException {
+        Cliente macarena = new Cliente();
+        macarena.setDni(45037310);
+        macarena.setNombre("Macarena");
+        macarena.setApellido("Huarte");
+        macarena.setFechaNacimiento(LocalDate.of(2003, 2, 11));
+        macarena.setTipoPersona(TipoPersona.PERSONA_FISICA);
+
+        // Crea cuenta: CA$ (Caja de Ahorro en Pesos)
+        Cuenta cuentaCA = new Cuenta()
+                .setMoneda(TipoMoneda.PESOS)
+                .setBalance(500000)
+                .setTipoCuenta(TipoCuenta.CAJA_AHORRO);
+
+        // Crea cuenta: CC$ (Cuenta Corriente en Pesos)
+        Cuenta cuentaCC = new Cuenta()
+                .setMoneda(TipoMoneda.PESOS)
+                .setBalance(500000)
+                .setTipoCuenta(TipoCuenta.CUENTA_CORRIENTE);
+
+        when(clienteDao.find(45037310, true)).thenReturn(macarena);
+
+        // Agregar la primera cuenta (CA$) al cliente
+        clienteService.agregarCuenta(cuentaCA, macarena.getDni());
+
+        // Verifica
+        verify(clienteDao, times(1)).save(macarena);
+        assertEquals(1, macarena.getCuentas().size());
+        assertEquals(macarena, cuentaCA.getTitular());
+
+        // Agregar la segunda cuenta (CC$) al cliente
+        clienteService.agregarCuenta(cuentaCC, macarena.getDni());
+
+        // Verifica
+        verify(clienteDao, times(2)).save(macarena);
+        assertEquals(2, macarena.getCuentas().size());
+        assertEquals(macarena, cuentaCC.getTitular());
+
+        // Verificar que ambas cuentas están en la lista de cuentas del cliente
+        assertTrue(macarena.getCuentas().contains(cuentaCA));
+        assertTrue(macarena.getCuentas().contains(cuentaCC));
+    }
+
+    //Agregar una CA$ y CAU$S → se puede agregar y se debe verificar que el cliente tenga 2 cuentas, titular sea el cliente que se creó
+    @Test
+    public void testAgregarCAyCAU() throws CuentaAlreadyExistsException, TipoCuentaAlreadyExistsException {
+        Cliente macarena = new Cliente();
+        macarena.setDni(45037310);
+        macarena.setNombre("Macarena");
+        macarena.setApellido("Huarte");
+        macarena.setFechaNacimiento(LocalDate.of(2003, 2, 11));
+        macarena.setTipoPersona(TipoPersona.PERSONA_FISICA);
+
+        // Crea cuenta: CA$ (Caja de Ahorro en Pesos)
+        Cuenta cuentaCA = new Cuenta()
+                .setMoneda(TipoMoneda.PESOS)
+                .setBalance(500000)
+                .setTipoCuenta(TipoCuenta.CAJA_AHORRO);
+
+        // Crea cuenta: CAU$ (Cuenta Ahorro en Dolares)
+        Cuenta cuentaCAU = new Cuenta()
+                .setMoneda(TipoMoneda.DOLARES)
+                .setBalance(500000)
+                .setTipoCuenta(TipoCuenta.CAJA_AHORRO);
+
+        when(clienteDao.find(45037310, true)).thenReturn(macarena);
+
+        // Agregar la primera cuenta (CA$) al cliente
+        clienteService.agregarCuenta(cuentaCA, macarena.getDni());
+
+        verify(clienteDao, times(1)).save(macarena);
+        assertEquals(1, macarena.getCuentas().size());
+        assertEquals(macarena, cuentaCA.getTitular());
+
+        // Agregar la segunda cuenta (CAU$) al cliente
+        clienteService.agregarCuenta(cuentaCAU, macarena.getDni());
+
+        verify(clienteDao, times(2)).save(macarena);
+        assertEquals(2, macarena.getCuentas().size());
+        assertEquals(macarena, cuentaCAU.getTitular());
+
+        // Verificar que ambas cuentas están en la lista de cuentas del cliente
+        assertTrue(macarena.getCuentas().contains(cuentaCA));
+        assertTrue(macarena.getCuentas().contains(cuentaCAU));
+    }
+
+    @Test
+    public void testBuscarPorDni() throws ClienteAlreadyExistsException {
+        Cliente macarena = new Cliente();
+        macarena.setDni(45037310);
+        macarena.setNombre("Macarena");
+        macarena.setApellido("Huarte");
+        macarena.setFechaNacimiento(LocalDate.of(2003, 2, 11));
+        macarena.setTipoPersona(TipoPersona.PERSONA_FISICA);
+
+        when(clienteDao.find(45037310, true)).thenReturn(macarena);
+
+        Cliente foundCliente = clienteService.buscarClientePorDni(45037310);
+        assertEquals(macarena, foundCliente);
+    }
+    @Test
+    public void testBuscarPorDni_Falla() {
+        when(clienteDao.find(45037310, true)).thenReturn(null);
+
+        Cliente foundCliente = clienteService.buscarClientePorDni(45037310);
+        assertNull(foundCliente);
+    }
+
+
+
 }
