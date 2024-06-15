@@ -1,6 +1,7 @@
 package ar.edu.utn.frbb.tup.service;
 
 import ar.edu.utn.frbb.tup.model.exception.ClienteAlreadyExistsException;
+import ar.edu.utn.frbb.tup.model.exception.ClienteNoExistsException;
 import ar.edu.utn.frbb.tup.model.exception.CuentaAlreadyExistsException;
 import ar.edu.utn.frbb.tup.model.exception.TipoCuentaAlreadyExistsException;
 import ar.edu.utn.frbb.tup.persistence.ClienteDao;
@@ -230,14 +231,13 @@ public class ClienteServiceTest {
         Cliente foundCliente = clienteService.buscarClientePorDni(45037310);
         assertEquals(macarena, foundCliente);
     }
+
     @Test
-    public void testBuscarPorDni_Falla() {
+    public void testBuscarPorDni_Falla() throws ClienteNoExistsException {
         when(clienteDao.find(45037310, true)).thenReturn(null);
 
-        Cliente foundCliente = clienteService.buscarClientePorDni(45037310);
-        assertNull(foundCliente);
+        assertThrows(ClienteNoExistsException.class, () -> {
+            clienteService.buscarClientePorDni(45037310);
+        });
     }
-
-
-
 }
